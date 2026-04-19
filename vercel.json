@@ -10,7 +10,8 @@
   ],
   "functions": {
     "api/index.ts": {
-      "includeFiles": "**/*",
+      "includeFiles": "server/**,shared/**",
+      "excludeFiles": "node_modules/@langchain/**,node_modules/langchain/**,node_modules/@aws-sdk/**",
       "maxDuration": 60
     }
   }

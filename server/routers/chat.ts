@@ -1,7 +1,3 @@
-/**
- * Chat Router - tRPC procedures for chat functionality
- */
-
 import { router, protectedProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { 
@@ -13,8 +9,6 @@ import {
   deleteConversation,
   createNewConversation
 } from "../db";
-import { executeAgent } from "../agent";
-import { executeAutonomousAgent } from "../autonomous-agent";
 
 type ChatMessage = {
   id: number;
@@ -28,9 +22,6 @@ type ChatMessage = {
 };
 
 export const chatRouter = router({
-  /**
-   * Send a message and get AI response (standard mode)
-   */
   sendMessage: protectedProcedure
     .input(
       z.object({
@@ -64,6 +55,7 @@ export const chatRouter = router({
       }));
 
       if (input.autonomousMode) {
+        const { executeAutonomousAgent } = await import("../autonomous-agent");
         const result = await executeAutonomousAgent(input.message, conversationHistory);
         
         await addMessage(conversationId, "assistant", result.finalResponse);
@@ -103,6 +95,7 @@ export const chatRouter = router({
         };
       }
 
+      const { executeAgent } = await import("../agent");
       const result = await executeAgent(input.message, conversationHistory);
 
       await addMessage(conversationId, "assistant", result.response);
@@ -126,9 +119,6 @@ export const chatRouter = router({
       };
     }),
 
-  /**
-   * Get conversation history
-   */
   getHistory: protectedProcedure
     .input(
       z.object({
@@ -147,18 +137,12 @@ export const chatRouter = router({
       return messages;
     }),
 
-  /**
-   * Get all conversations for current user
-   */
   getConversations: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.id;
     const conversations = await getUserConversations(userId);
     return conversations;
   }),
 
-  /**
-   * Create a new conversation
-   */
   createConversation: protectedProcedure
     .input(
       z.object({
@@ -171,9 +155,6 @@ export const chatRouter = router({
       return conversation;
     }),
 
-  /**
-   * Delete a conversation
-   */
   deleteConversation: protectedProcedure
     .input(
       z.object({
@@ -193,9 +174,6 @@ export const chatRouter = router({
       return { success: true };
     }),
 
-  /**
-   * Update conversation title
-   */
   updateTitle: protectedProcedure
     .input(
       z.object({
@@ -216,9 +194,6 @@ export const chatRouter = router({
       return { success: true };
     }),
 
-  /**
-   * Clear conversation history
-   */
   clearHistory: protectedProcedure
     .input(
       z.object({
@@ -233,7 +208,8 @@ export const chatRouter = router({
         throw new Error("Conversation not found or unauthorized");
       }
 
-      await (await import("../db")).clearConversationMessages(input.conversationId);
+      const { clearConversationMessages } = await import("../db");
+      await clearConversationMessages(input.conversationId);
 
       return { success: true };
     }),
