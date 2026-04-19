@@ -39,7 +39,10 @@ type InsertUser = {
   lastSignedIn?: Date;
 };
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const IS_VERCEL = process.env.VERCEL === '1';
+const DATA_DIR = IS_VERCEL 
+  ? path.join('/tmp', 'scholar-agent-data')
+  : path.join(process.cwd(), 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const CONVERSATIONS_FILE = path.join(DATA_DIR, 'conversations.json');
 const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
@@ -53,8 +56,13 @@ let messageIdCounter = 1;
 let initialized = false;
 
 function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      console.log('[FileStorage] Created data directory:', DATA_DIR);
+    }
+  } catch (error) {
+    console.error('[FileStorage] Failed to create data directory:', error);
   }
 }
 
@@ -82,20 +90,30 @@ function saveToFile<T>(filePath: string, data: T) {
 function loadAllFromFileStorage() {
   if (initialized) return;
   
-  const usersData = loadFromFile<{ users: User[]; counter: number }>(USERS_FILE, { users: [], counter: 1 });
-  const conversationsData = loadFromFile<{ conversations: Conversation[]; counter: number }>(CONVERSATIONS_FILE, { conversations: [], counter: 1 });
-  const messagesData = loadFromFile<{ messages: Message[]; counter: number }>(MESSAGES_FILE, { messages: [], counter: 1 });
+  console.log('[FileStorage] Initializing, IS_VERCEL:', IS_VERCEL);
+  console.log('[FileStorage] Data directory:', DATA_DIR);
+  
+  try {
+    ensureDataDir();
+    
+    const usersData = loadFromFile<{ users: User[]; counter: number }>(USERS_FILE, { users: [], counter: 1 });
+    const conversationsData = loadFromFile<{ conversations: Conversation[]; counter: number }>(CONVERSATIONS_FILE, { conversations: [], counter: 1 });
+    const messagesData = loadFromFile<{ messages: Message[]; counter: number }>(MESSAGES_FILE, { messages: [], counter: 1 });
 
-  usersData.users.forEach(u => memoryUsers.set(u.openId, u));
-  conversationsData.conversations.forEach(c => memoryConversations.set(c.id, c));
-  messagesData.messages.forEach(m => memoryMessages.set(m.id, m));
+    usersData.users.forEach(u => memoryUsers.set(u.openId, u));
+    conversationsData.conversations.forEach(c => memoryConversations.set(c.id, c));
+    messagesData.messages.forEach(m => memoryMessages.set(m.id, m));
 
-  userIdCounter = usersData.counter;
-  conversationIdCounter = conversationsData.counter;
-  messageIdCounter = messagesData.counter;
+    userIdCounter = usersData.counter;
+    conversationIdCounter = conversationsData.counter;
+    messageIdCounter = messagesData.counter;
+    
+    console.log(`[FileStorage] Loaded ${memoryUsers.size} users, ${memoryConversations.size} conversations, ${memoryMessages.size} messages`);
+  } catch (error) {
+    console.error('[FileStorage] Failed to load data:', error);
+  }
+  
   initialized = true;
-
-  console.log(`[FileStorage] Loaded ${memoryUsers.size} users, ${memoryConversations.size} conversations, ${memoryMessages.size} messages`);
 }
 
 function saveAllToFileStorage() {
