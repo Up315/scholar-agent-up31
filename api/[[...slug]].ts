@@ -13,6 +13,10 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 registerOAuthRoutes(app);
 
+app.options('/api/trpc/*', (req, res) => {
+  res.status(200).end();
+});
+
 app.use(
   '/api/trpc',
   createExpressMiddleware({
@@ -22,10 +26,12 @@ app.use(
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  await new Promise<void>((resolve, reject) => {
-    app(req as any, res as any, (err: any) => {
-      if (err) reject(err);
-      else resolve();
+  return new Promise((resolve, reject) => {
+    app(req, res, (result: any) => {
+      if (result instanceof Error) {
+        return reject(result);
+      }
+      return resolve(result);
     });
   });
 }
