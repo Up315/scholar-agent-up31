@@ -8,9 +8,13 @@
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "nodejs22.x"
+  "functions": [
+    {
+      "src": "api/**/*.ts",
+      "use": "@vercel/node",
+      "config": {
+        "runtime": "nodejs22.x"
+      }
     }
-  }
+  ]
 }
