@@ -1,16 +1,23 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist/public",
-  "installCommand": "npm install",
-  "framework": null,
+  "builds": [
+    {
+      "src": "api/index.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "dist/public/**",
+      "use": "@vercel/static"
+    }
+  ],
   "rewrites": [
-    { "source": "/api/trpc/:path*", "destination": "/api" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/api/trpc/(.*)", "destination": "/api/index.ts" },
+    { "source": "/(.*)", "destination": "/dist/public/index.html" }
   ],
   "functions": {
     "api/index.ts": {
-      "includeFiles": "**/*"
+      "includeFiles": "server/**",
+      "maxDuration": 60
     }
   }
 }
