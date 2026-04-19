@@ -4,7 +4,6 @@ import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
-import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 import { ENV } from "./env";
 import type {
@@ -14,6 +13,16 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from "./types/manusTypes";
+
+type User = {
+  id: number;
+  openId: string;
+  name: string | null;
+  email: string | null;
+  loginMethod: string | null;
+  createdAt: Date;
+  lastSignedIn: Date;
+};
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;

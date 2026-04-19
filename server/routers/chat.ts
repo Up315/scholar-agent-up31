@@ -15,7 +15,17 @@ import {
 } from "../db";
 import { executeAgent } from "../agent";
 import { executeAutonomousAgent } from "../autonomous-agent";
-import type { Message } from "../../drizzle/schema";
+
+type ChatMessage = {
+  id: number;
+  conversationId: number;
+  role: string;
+  content: string;
+  toolName: string | null;
+  toolInput: string | null;
+  toolOutput: string | null;
+  createdAt: Date;
+};
 
 export const chatRouter = router({
   /**
@@ -48,7 +58,7 @@ export const chatRouter = router({
 
       const history = await getConversationMessages(conversationId);
 
-      const conversationHistory = history.map((msg: Message) => ({
+      const conversationHistory = history.map((msg: ChatMessage) => ({
         role: msg.role,
         content: msg.content,
       }));

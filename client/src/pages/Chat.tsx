@@ -9,7 +9,7 @@ import AuthModal from "@/components/AuthModal";
 
 interface Message {
   id: number;
-  role: "user" | "assistant" | "tool";
+  role: string;
   content: string;
   toolName?: string | null;
   createdAt: Date;

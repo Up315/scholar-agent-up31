@@ -158,7 +158,7 @@ export async function getUserByOpenId(openId: string): Promise<User | null> {
 }
 
 export async function getUserById(id: number): Promise<User | null> {
-  for (const user of memoryUsers.values()) {
+  for (const user of Array.from(memoryUsers.values())) {
     if (user.id === id) return user;
   }
   return null;
@@ -227,7 +227,7 @@ export async function addMessage(
 }
 
 export async function clearConversationMessages(conversationId: number): Promise<void> {
-  for (const [id, msg] of memoryMessages) {
+  for (const [id, msg] of Array.from(memoryMessages)) {
     if (msg.conversationId === conversationId) {
       memoryMessages.delete(id);
     }
@@ -246,7 +246,7 @@ export async function updateConversationTitle(conversationId: number, title: str
 
 export async function deleteConversation(conversationId: number): Promise<void> {
   memoryConversations.delete(conversationId);
-  for (const [id, msg] of memoryMessages) {
+  for (const [id, msg] of Array.from(memoryMessages)) {
     if (msg.conversationId === conversationId) {
       memoryMessages.delete(id);
     }

@@ -1,12 +1,21 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
 import * as db from "../db";
 
-let devUser: User & { id: number } | null = null;
+type User = {
+  id: number;
+  openId: string;
+  name: string | null;
+  email: string | null;
+  loginMethod: string | null;
+  createdAt: Date;
+  lastSignedIn: Date;
+};
 
-async function getOrCreateDevUser(): Promise<User & { id: number }> {
+let devUser: User | null = null;
+
+async function getOrCreateDevUser(): Promise<User> {
   if (devUser) return devUser;
   
   devUser = await db.upsertUser({
