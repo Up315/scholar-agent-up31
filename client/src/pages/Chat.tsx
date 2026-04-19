@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Send, Plus, ArrowLeft, MessageSquare, Calculator, Cloud, Clock, BookOpen, Code, Trash2, Zap, Diamond, Menu, X, MessageCircle, LogOut, User } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
-import AuthModal from "@/components/AuthModal";
+import AuthModal, { getMockUser, setMockUser } from "@/components/AuthModal";
 
 interface Message {
   id: number;
@@ -83,21 +83,17 @@ export default function Chat() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/me", { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) {
-          setUser(data.user);
-        } else {
-          setAuthModalOpen(true);
-        }
-      })
-      .catch(() => setAuthModalOpen(true))
-      .finally(() => setAuthLoading(false));
+    const mockUser = getMockUser();
+    if (mockUser) {
+      setUser(mockUser);
+    } else {
+      setAuthModalOpen(true);
+    }
+    setAuthLoading(false);
   }, []);
 
-  const handleLogout = async () => {
-    await fetch("/api/logout", { method: "POST", credentials: "include" });
+  const handleLogout = () => {
+    setMockUser(null);
     setUser(null);
     setAuthModalOpen(true);
   };

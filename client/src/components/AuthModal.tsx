@@ -14,6 +14,30 @@ interface AuthModalProps {
 
 type AuthMode = "login" | "register" | "forgot";
 
+const MOCK_USER_KEY = "scholar_agent_user";
+
+export function getMockUser(): { id: number; name: string } | null {
+  if (typeof window === "undefined") return null;
+  const stored = localStorage.getItem(MOCK_USER_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+export function setMockUser(user: { id: number; name: string } | null) {
+  if (typeof window === "undefined") return;
+  if (user) {
+    localStorage.setItem(MOCK_USER_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(MOCK_USER_KEY);
+  }
+}
+
 export default function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
@@ -38,54 +62,26 @@ export default function AuthModal({ open, onOpenChange, onSuccess }: AuthModalPr
     setError("");
     setLoading(true);
 
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     try {
-      if (mode === "login") {
-        const res = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ username: email, password }),
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          toast.success("登录成功", { description: `欢迎回来，${data.user.name}` });
-          onSuccess(data.user);
-          onOpenChange(false);
-        } else {
-          setError(data.error || "登录失败");
-        }
-      } else if (mode === "register") {
-        if (password !== confirmPassword) {
-          setError("两次输入的密码不一致");
-          setLoading(false);
-          return;
-        }
-        if (password.length < 6) {
-          setError("密码长度至少6位");
-          setLoading(false);
-          return;
-        }
-        const res = await fetch("/api/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ username: email, password }),
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          toast.success("注册成功", { description: `欢迎，${data.user.name}` });
-          onSuccess(data.user);
-          onOpenChange(false);
-        } else {
-          setError(data.error || "注册失败");
-        }
+      if (mode === "login" || mode === "register") {
+        const mockUser = {
+          id: 1,
+          name: email.split("@")[0] || "测试用户",
+        };
+        
+        setMockUser(mockUser);
+        toast.success("登录成功", { description: `欢迎，${mockUser.name}` });
+        onSuccess(mockUser);
+        onOpenChange(false);
       } else if (mode === "forgot") {
         setError("密码重置功能暂未开放，请联系管理员");
         setLoading(false);
         return;
       }
     } catch (err) {
-      setError("网络错误，请重试");
+      setError("登录失败，请重试");
     } finally {
       setLoading(false);
     }

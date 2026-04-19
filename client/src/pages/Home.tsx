@@ -14,7 +14,7 @@ import {
   LogOut,
   User
 } from "lucide-react";
-import AuthModal from "@/components/AuthModal";
+import AuthModal, { getMockUser, setMockUser } from "@/components/AuthModal";
 
 const chatTypes = [
   {
@@ -63,19 +63,15 @@ export default function Home() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/me", { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) {
-          setUser(data.user);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    const mockUser = getMockUser();
+    if (mockUser) {
+      setUser(mockUser);
+    }
+    setLoading(false);
   }, []);
 
-  const handleLogout = async () => {
-    await fetch("/api/logout", { method: "POST", credentials: "include" });
+  const handleLogout = () => {
+    setMockUser(null);
     setUser(null);
   };
 
