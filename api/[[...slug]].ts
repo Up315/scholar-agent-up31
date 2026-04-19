@@ -1,22 +1,39 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import 'dotenv/config';
-import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
+import express from 'express';
+import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { registerOAuthRoutes } from '../server/_core/oauth';
 import { appRouter } from '../server/routers';
 import { createContext } from '../server/_core/context';
 
 console.log('[API] Serverless function module loaded');
 
-const handler = async (req: Request) => {
+const app = express();
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+registerOAuthRoutes(app);
+
+app.use(
+  '/api/trpc',
+  createExpressMiddleware({
+    router: appRouter,
+    createContext,
+  })
+);
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('[API] Request received:', req.method, req.url);
   
-  return fetchRequestHandler({
-    endpoint: '/api/trpc',
-    req,
-    router: appRouter,
-    createContext: () => createContext({ req }),
-    onError({ error, path }) {
-      console.error(`[tRPC] Error on '${path}':`, error);
-    },
+  await new Promise<void>((resolve, reject) => {
+    app(req as any, res as any, (err: any) => {
+      if (err) {
+        console.error('[API] Error:', err);
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
   });
-};
-
-export { handler as GET, handler as POST };
+}
