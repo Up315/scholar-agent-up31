@@ -26,7 +26,7 @@ app.use('*', cors({
 app.use('/trpc/*', trpcServer({
   router: appRouter,
   createContext: async (opts) => {
-    return createContext({ req: opts.req, res: opts.res });
+    return createContext({ req: opts.req });
   },
 }));
 
