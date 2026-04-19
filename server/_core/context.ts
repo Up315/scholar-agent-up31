@@ -1,4 +1,3 @@
-import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
 import * as db from "../db";
@@ -30,29 +29,29 @@ async function getOrCreateDevUser(): Promise<User> {
 }
 
 export type TrpcContext = {
-  req: CreateExpressContextOptions["req"];
-  res: CreateExpressContextOptions["res"];
+  req?: Request | any;
+  res?: any;
   user: User | null;
 };
 
-export async function createContext(
-  opts: CreateExpressContextOptions
-): Promise<TrpcContext> {
+export async function createContext(opts?: { req?: Request | any; res?: any }): Promise<TrpcContext> {
   let user: User | null = null;
 
   if (!ENV.isProduction && !ENV.oAuthServerUrl) {
     user = await getOrCreateDevUser();
   } else {
     try {
-      user = await sdk.authenticateRequest(opts.req);
+      if (opts?.req) {
+        user = await sdk.authenticateRequest(opts.req);
+      }
     } catch (error) {
       user = null;
     }
   }
 
   return {
-    req: opts.req,
-    res: opts.res,
+    req: opts?.req,
+    res: opts?.res,
     user,
   };
 }
