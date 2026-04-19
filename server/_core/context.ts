@@ -1,6 +1,6 @@
-import { sdk } from "./sdk";
-import { ENV } from "./env";
-import * as db from "../db";
+import { sdk } from "./sdk.js";
+import { ENV } from "./env.js";
+import * as db from "../db.js";
 
 type User = {
   id: number;

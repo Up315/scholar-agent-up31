@@ -4,12 +4,12 @@ import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { handle } from 'hono/vercel';
 import { trpcServer } from '@hono/trpc-server';
-import { appRouter } from '../server/routers';
-import { createContext } from '../server/_core/context';
-import { COOKIE_NAME, ONE_YEAR_MS } from '../shared/const';
-import * as db from '../server/db';
-import { sdk } from '../server/_core/sdk';
-import { ENV } from '../server/_core/env';
+import { appRouter } from '../server/routers.js';
+import { createContext } from '../server/_core/context.js';
+import { COOKIE_NAME, ONE_YEAR_MS } from '../shared/const.js';
+import * as db from '../server/db.js';
+import { sdk } from '../server/_core/sdk.js';
+import { ENV } from '../server/_core/env.js';
 
 console.log('[API] Server starting...');
 console.log('[API] NODE_ENV:', process.env.NODE_ENV);

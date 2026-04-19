@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, protectedProcedure } from "../_core/trpc.js";
 import { z } from "zod";
 import { 
   getOrCreateConversation, 
@@ -8,7 +8,7 @@ import {
   updateConversationTitle,
   deleteConversation,
   createNewConversation
-} from "../db";
+} from "../db.js";
 
 type ChatMessage = {
   id: number;
@@ -55,7 +55,7 @@ export const chatRouter = router({
       }));
 
       if (input.autonomousMode) {
-        const { executeAutonomousAgent } = await import("../autonomous-agent");
+        const { executeAutonomousAgent } = await import("../autonomous-agent.js");
         const result = await executeAutonomousAgent(input.message, conversationHistory);
         
         await addMessage(conversationId, "assistant", result.finalResponse);
@@ -95,7 +95,7 @@ export const chatRouter = router({
         };
       }
 
-      const { executeAgent } = await import("../agent");
+      const { executeAgent } = await import("../agent.js");
       const result = await executeAgent(input.message, conversationHistory);
 
       await addMessage(conversationId, "assistant", result.response);
@@ -208,7 +208,7 @@ export const chatRouter = router({
         throw new Error("Conversation not found or unauthorized");
       }
 
-      const { clearConversationMessages } = await import("../db");
+      const { clearConversationMessages } = await import("../db.js");
       await clearConversationMessages(input.conversationId);
 
       return { success: true };
