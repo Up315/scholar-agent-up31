@@ -3,11 +3,10 @@ import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from '../server/routers';
 import { createContext } from '../server/_core/context';
 
-console.log('[API] [[...slug]] module loaded');
+console.log('[API] Serverless function module loaded');
 
-async function GET(req: Request) {
-  console.log('[API] GET request to:', req.url);
-  console.log('[API] Method:', req.method);
+const handler = async (req: Request) => {
+  console.log('[API] Request received:', req.method, req.url);
   
   return fetchRequestHandler({
     endpoint: '/api/trpc',
@@ -15,24 +14,9 @@ async function GET(req: Request) {
     router: appRouter,
     createContext: () => createContext({ req }),
     onError({ error, path }) {
-      console.error(`[API] tRPC Error on '${path}':`, error);
+      console.error(`[tRPC] Error on '${path}':`, error);
     },
   });
-}
+};
 
-async function POST(req: Request) {
-  console.log('[API] POST request to:', req.url);
-  console.log('[API] Method:', req.method);
-  
-  return fetchRequestHandler({
-    endpoint: '/api/trpc',
-    req,
-    router: appRouter,
-    createContext: () => createContext({ req }),
-    onError({ error, path }) {
-      console.error(`[API] tRPC Error on '${path}':`, error);
-    },
-  });
-}
-
-export { GET, POST };
+export { handler as GET, handler as POST };
