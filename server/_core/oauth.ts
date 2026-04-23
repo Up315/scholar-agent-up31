@@ -61,22 +61,32 @@ export function registerOAuthRoutes(app: Express) {
     }
 
     try {
-      const user = await db.authenticateUser(username, password);
+      const result = await db.authenticateUser(username, password);
       
-      if (!user) {
-        res.status(401).json({ error: "用户名或密码错误" });
+      if (result.locked) {
+        res.status(423).json({ error: "账户已被锁定，请15分钟后再试" });
+        return;
+      }
+      
+      if (!result.user) {
+        const remaining = result.remainingAttempts;
+        if (remaining <= 2) {
+          res.status(401).json({ error: `用户名或密码错误，还剩 ${remaining} 次尝试机会` });
+        } else {
+          res.status(401).json({ error: "用户名或密码错误" });
+        }
         return;
       }
 
-      const sessionToken = await sdk.createSessionToken(user.openId, {
-        name: user.name || username,
+      const sessionToken = await sdk.createSessionToken(result.user.openId, {
+        name: result.user.name || username,
         expiresInMs: ONE_YEAR_MS,
       });
 
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      res.json({ success: true, user: { id: user.id, name: user.name } });
+      res.json({ success: true, user: { id: result.user.id, name: result.user.name } });
     } catch (error) {
       console.error("[Login] Failed", error);
       res.status(500).json({ error: "登录失败" });

@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, Send, Plus, ArrowLeft, MessageSquare, Calculator, Cloud, Clock, BookOpen, Code, Trash2, Zap, Diamond, Menu, X, MessageCircle, LogOut, User } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
 import AuthModal, { getMockUser, setMockUser } from "@/components/AuthModal";
+import { useChatShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 interface Message {
   id: number;
@@ -81,6 +83,7 @@ export default function Chat() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const mockUser = getMockUser();
@@ -279,6 +282,18 @@ export default function Chat() {
     }
   };
 
+  useChatShortcuts({
+    onSend: () => {
+      if (input.trim() && !isLoading) {
+        handleSendMessage(new Event('submit') as any);
+      }
+    },
+    onNewConversation: handleNewConversation,
+    onToggleSidebar: () => setSidebarOpen(!sidebarOpen),
+    onClearHistory: messages.length > 0 ? handleClearHistory : undefined,
+    disabled: isLoading,
+  });
+
   const currentConfig = chatTypeConfig[chatType] || chatTypeConfig.general;
   const CurrentIcon = currentConfig.icon;
   const conversations = getConversationsQuery.data || [];
@@ -297,10 +312,13 @@ export default function Chat() {
 
   if (authLoading) {
     return (
-      <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-500">加载中...</p>
+      <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+        <div className="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center mb-6 animate-pulse">
+          <MessageSquare className="w-8 h-8 text-purple-400" />
+        </div>
+        <div className="space-y-3 text-center">
+          <Skeleton className="h-6 w-40 mx-auto" />
+          <Skeleton className="h-4 w-32 mx-auto" />
         </div>
       </div>
     );
@@ -563,6 +581,7 @@ export default function Chat() {
           <div className="w-full px-4 sm:px-6 py-4 sm:py-5">
             <form onSubmit={handleSendMessage} className="flex gap-3 sm:gap-4">
               <Input
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={currentConfig.placeholder}
@@ -579,7 +598,7 @@ export default function Chat() {
               </Button>
             </form>
             <p className="text-xs sm:text-sm text-slate-400 text-center mt-3 sm:mt-4">
-              Scholar Agent • 由 AI 驱动
+              Scholar Agent • 由 AI 驱动 • <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-xs">Ctrl+Enter</kbd> 发送
             </p>
           </div>
         </footer>

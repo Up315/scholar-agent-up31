@@ -1,0 +1,24 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "openId": "local:18730413387",
+      "name": "18730413387",
+      "email": "18730413387@local",
+      "loginMethod": "local",
+      "createdAt": "2026-04-17T02:54:41.819Z",
+      "lastSignedIn": "2026-04-19T02:39:24.391Z",
+      "password": "Lulala098"
+    },
+    {
+      "id": 2,
+      "openId": "dev-user-001",
+      "name": "用户",
+      "email": "dev@example.com",
+      "loginMethod": "dev",
+      "createdAt": "2026-04-17T02:55:44.545Z",
+      "lastSignedIn": "2026-04-21T06:12:56.908Z"
+    }
+  ],
+  "counter": 3
+}

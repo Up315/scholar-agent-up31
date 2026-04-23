@@ -5,9 +5,12 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx watch server/_core/index.ts",
+    "dev:cf": "wrangler pages dev dist/public --compatibility-date=2024-01-01",
     "build": "vite build",
+    "build:cf": "vite build",
     "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "node dist/index.js",
+    "deploy:pages": "wrangler pages deploy dist/public",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
@@ -95,7 +98,6 @@
     "@types/node": "^24.7.0",
     "@types/react": "^19.2.1",
     "@types/react-dom": "^19.2.1",
-    "@vercel/node": "^5.7.11",
     "@vitejs/plugin-react": "^4.2.0",
     "add": "^2.0.6",
     "autoprefixer": "^10.4.20",
@@ -110,7 +112,8 @@
     "typescript": "5.9.3",
     "vite": "^5.4.0",
     "vite-plugin-manus-runtime": "^0.0.57",
-    "vitest": "^2.1.4"
+    "vitest": "^2.1.4",
+    "wrangler": "^4.84.1"
   },
   "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
   "pnpm": {

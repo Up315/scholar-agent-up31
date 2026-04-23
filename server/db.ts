@@ -1,6 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-
 type User = {
   id: number;
   openId: string;
@@ -9,7 +6,9 @@ type User = {
   loginMethod: string | null;
   createdAt: Date;
   lastSignedIn: Date;
-  password?: string;
+  passwordHash?: string;
+  loginAttempts?: number;
+  lockedUntil?: number;
 };
 
 type Conversation = {
@@ -39,13 +38,7 @@ type InsertUser = {
   lastSignedIn?: Date;
 };
 
-const IS_VERCEL = process.env.VERCEL === '1';
-const DATA_DIR = IS_VERCEL 
-  ? path.join('/tmp', 'scholar-agent-data')
-  : path.join(process.cwd(), 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const CONVERSATIONS_FILE = path.join(DATA_DIR, 'conversations.json');
-const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
+type SafeUser = Omit<User, 'passwordHash' | 'loginAttempts' | 'lockedUntil'>;
 
 const memoryUsers: Map<string, User> = new Map();
 const memoryConversations: Map<number, Conversation> = new Map();
@@ -53,91 +46,56 @@ const memoryMessages: Map<number, Message> = new Map();
 let userIdCounter = 1;
 let conversationIdCounter = 1;
 let messageIdCounter = 1;
-let initialized = false;
 
-function ensureDataDir() {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-      console.log('[FileStorage] Created data directory:', DATA_DIR);
-    }
-  } catch (error) {
-    console.error('[FileStorage] Failed to create data directory:', error);
-  }
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_TIME_MS = 15 * 60 * 1000;
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+async function deriveKey(secret: string): Promise<CryptoKey> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: encoder.encode('scholar-agent-salt'),
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
 }
 
-function loadFromFile<T>(filePath: string, defaultValue: T): T {
-  try {
-    if (fs.existsSync(filePath)) {
-      const data = fs.readFileSync(filePath, 'utf-8');
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.warn(`[FileStorage] Error loading ${filePath}:`, error);
-  }
-  return defaultValue;
+export async function hashPassword(password: string): Promise<string> {
+  const hashBuffer = await crypto.subtle.digest(
+    'SHA-256',
+    encoder.encode(password + 'scholar-agent-pepper')
+  );
+  return btoa(String.fromCharCode(...Array.from(new Uint8Array(hashBuffer))));
 }
 
-function saveToFile<T>(filePath: string, data: T) {
-  try {
-    ensureDataDir();
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error(`[FileStorage] Error saving ${filePath}:`, error);
-  }
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  const newHash = await hashPassword(password);
+  return newHash === hash;
 }
 
-function loadAllFromFileStorage() {
-  if (initialized) return;
-  
-  console.log('[FileStorage] Initializing, IS_VERCEL:', IS_VERCEL);
-  console.log('[FileStorage] Data directory:', DATA_DIR);
-  
-  try {
-    ensureDataDir();
-    
-    const usersData = loadFromFile<{ users: User[]; counter: number }>(USERS_FILE, { users: [], counter: 1 });
-    const conversationsData = loadFromFile<{ conversations: Conversation[]; counter: number }>(CONVERSATIONS_FILE, { conversations: [], counter: 1 });
-    const messagesData = loadFromFile<{ messages: Message[]; counter: number }>(MESSAGES_FILE, { messages: [], counter: 1 });
-
-    usersData.users.forEach(u => memoryUsers.set(u.openId, u));
-    conversationsData.conversations.forEach(c => memoryConversations.set(c.id, c));
-    messagesData.messages.forEach(m => memoryMessages.set(m.id, m));
-
-    userIdCounter = usersData.counter;
-    conversationIdCounter = conversationsData.counter;
-    messageIdCounter = messagesData.counter;
-    
-    console.log(`[FileStorage] Loaded ${memoryUsers.size} users, ${memoryConversations.size} conversations, ${memoryMessages.size} messages`);
-  } catch (error) {
-    console.error('[FileStorage] Failed to load data:', error);
-  }
-  
-  initialized = true;
+function toSafeUser(user: User): SafeUser {
+  const { passwordHash, loginAttempts, lockedUntil, ...safeUser } = user;
+  return safeUser;
 }
 
-function saveAllToFileStorage() {
-  const usersData = {
-    users: Array.from(memoryUsers.values()),
-    counter: userIdCounter
-  };
-  const conversationsData = {
-    conversations: Array.from(memoryConversations.values()),
-    counter: conversationIdCounter
-  };
-  const messagesData = {
-    messages: Array.from(memoryMessages.values()),
-    counter: messageIdCounter
-  };
+console.log("[MemoryStorage] Initialized in-memory storage (Cloudflare Workers compatible)");
 
-  saveToFile(USERS_FILE, usersData);
-  saveToFile(CONVERSATIONS_FILE, conversationsData);
-  saveToFile(MESSAGES_FILE, messagesData);
-}
-
-loadAllFromFileStorage();
-
-export async function upsertUser(user: InsertUser): Promise<User> {
+export async function upsertUser(user: InsertUser): Promise<SafeUser> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
   }
@@ -152,8 +110,7 @@ export async function upsertUser(user: InsertUser): Promise<User> {
       lastSignedIn: user.lastSignedIn ?? new Date(),
     };
     memoryUsers.set(user.openId, updated);
-    saveAllToFileStorage();
-    return updated;
+    return toSafeUser(updated);
   }
 
   const newUser: User = {
@@ -166,18 +123,18 @@ export async function upsertUser(user: InsertUser): Promise<User> {
     lastSignedIn: user.lastSignedIn ?? new Date(),
   };
   memoryUsers.set(user.openId, newUser);
-  saveAllToFileStorage();
-  console.log("[FileStorage] Created user:", newUser.id, newUser.name);
-  return newUser;
+  console.log("[MemoryStorage] Created user:", newUser.id, newUser.name);
+  return toSafeUser(newUser);
 }
 
-export async function getUserByOpenId(openId: string): Promise<User | null> {
-  return memoryUsers.get(openId) || null;
+export async function getUserByOpenId(openId: string): Promise<SafeUser | null> {
+  const user = memoryUsers.get(openId);
+  return user ? toSafeUser(user) : null;
 }
 
-export async function getUserById(id: number): Promise<User | null> {
+export async function getUserById(id: number): Promise<SafeUser | null> {
   for (const user of Array.from(memoryUsers.values())) {
-    if (user.id === id) return user;
+    if (user.id === id) return toSafeUser(user);
   }
   return null;
 }
@@ -198,8 +155,7 @@ export async function getOrCreateConversation(
     updatedAt: new Date(),
   };
   memoryConversations.set(newConv.id, newConv);
-  saveAllToFileStorage();
-  console.log("[FileStorage] Created conversation:", newConv.id);
+  console.log("[MemoryStorage] Created conversation:", newConv.id);
   return newConv;
 }
 
@@ -240,8 +196,7 @@ export async function addMessage(
     conv.updatedAt = new Date();
   }
   
-  saveAllToFileStorage();
-  console.log("[FileStorage] Added message:", newMsg.id, "to conversation:", conversationId);
+  console.log("[MemoryStorage] Added message:", newMsg.id, "to conversation:", conversationId);
 }
 
 export async function clearConversationMessages(conversationId: number): Promise<void> {
@@ -250,7 +205,6 @@ export async function clearConversationMessages(conversationId: number): Promise
       memoryMessages.delete(id);
     }
   }
-  saveAllToFileStorage();
 }
 
 export async function updateConversationTitle(conversationId: number, title: string): Promise<void> {
@@ -258,7 +212,6 @@ export async function updateConversationTitle(conversationId: number, title: str
   if (conv) {
     conv.title = title;
     conv.updatedAt = new Date();
-    saveAllToFileStorage();
   }
 }
 
@@ -269,7 +222,6 @@ export async function deleteConversation(conversationId: number): Promise<void> 
       memoryMessages.delete(id);
     }
   }
-  saveAllToFileStorage();
 }
 
 export async function createNewConversation(userId: number, title?: string): Promise<Conversation> {
@@ -281,26 +233,52 @@ export async function createNewConversation(userId: number, title?: string): Pro
     updatedAt: new Date(),
   };
   memoryConversations.set(newConv.id, newConv);
-  saveAllToFileStorage();
-  console.log("[FileStorage] Created new conversation:", newConv.id);
+  console.log("[MemoryStorage] Created new conversation:", newConv.id);
   return newConv;
 }
 
-export async function authenticateUser(username: string, password: string): Promise<User | null> {
+export async function authenticateUser(username: string, password: string): Promise<{ user: SafeUser | null; locked: boolean; remainingAttempts: number }> {
   const openId = `local:${username}`;
-
   const existingUser = memoryUsers.get(openId);
+  
   if (existingUser) {
-    const storedPassword = existingUser.password;
-    if (storedPassword === password) {
-      const updated = { ...existingUser, lastSignedIn: new Date() };
-      memoryUsers.set(openId, updated);
-      saveAllToFileStorage();
-      return updated;
+    if (existingUser.lockedUntil && Date.now() < existingUser.lockedUntil) {
+      const remainingTime = Math.ceil((existingUser.lockedUntil - Date.now()) / 60000);
+      console.log("[Security] Account locked:", username, "for", remainingTime, "minutes");
+      return { user: null, locked: true, remainingAttempts: 0 };
     }
-    return null;
+    
+    const passwordHash = existingUser.passwordHash || '';
+    const isValid = passwordHash ? await verifyPassword(password, passwordHash) : false;
+    
+    if (isValid) {
+      const updated: User = {
+        ...existingUser,
+        lastSignedIn: new Date(),
+        loginAttempts: 0,
+        lockedUntil: undefined,
+      };
+      memoryUsers.set(openId, updated);
+      return { user: toSafeUser(updated), locked: false, remainingAttempts: MAX_LOGIN_ATTEMPTS };
+    }
+    
+    const attempts = (existingUser.loginAttempts || 0) + 1;
+    const updated: User = {
+      ...existingUser,
+      loginAttempts: attempts,
+      lockedUntil: attempts >= MAX_LOGIN_ATTEMPTS ? Date.now() + LOCK_TIME_MS : undefined,
+    };
+    memoryUsers.set(openId, updated);
+    
+    console.log("[Security] Failed login attempt:", username, "attempts:", attempts);
+    return { 
+      user: null, 
+      locked: attempts >= MAX_LOGIN_ATTEMPTS, 
+      remainingAttempts: Math.max(0, MAX_LOGIN_ATTEMPTS - attempts) 
+    };
   }
 
+  const hashedPassword = await hashPassword(password);
   const newUser: User = {
     id: userIdCounter++,
     openId,
@@ -309,16 +287,16 @@ export async function authenticateUser(username: string, password: string): Prom
     loginMethod: "local",
     createdAt: new Date(),
     lastSignedIn: new Date(),
-    password,
+    passwordHash: hashedPassword,
+    loginAttempts: 0,
   };
   
   memoryUsers.set(openId, newUser);
-  saveAllToFileStorage();
-  console.log("[FileStorage] Created new user:", newUser.id, newUser.name);
-  return newUser;
+  console.log("[MemoryStorage] Created new user:", newUser.id, newUser.name);
+  return { user: toSafeUser(newUser), locked: false, remainingAttempts: MAX_LOGIN_ATTEMPTS };
 }
 
-export async function registerUser(username: string, password: string): Promise<User | null> {
+export async function registerUser(username: string, password: string): Promise<SafeUser | null> {
   const openId = `local:${username}`;
 
   const existingUser = memoryUsers.get(openId);
@@ -326,6 +304,7 @@ export async function registerUser(username: string, password: string): Promise<
     return null;
   }
 
+  const hashedPassword = await hashPassword(password);
   const newUser: User = {
     id: userIdCounter++,
     openId,
@@ -334,11 +313,11 @@ export async function registerUser(username: string, password: string): Promise<
     loginMethod: "local",
     createdAt: new Date(),
     lastSignedIn: new Date(),
-    password,
+    passwordHash: hashedPassword,
+    loginAttempts: 0,
   };
   
   memoryUsers.set(openId, newUser);
-  saveAllToFileStorage();
-  console.log("[FileStorage] Registered new user:", newUser.id, newUser.name);
-  return newUser;
+  console.log("[MemoryStorage] Registered new user:", newUser.id, newUser.name);
+  return toSafeUser(newUser);
 }

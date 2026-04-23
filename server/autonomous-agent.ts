@@ -6,7 +6,8 @@
 import { ChatOpenAI } from "@langchain/openai";
 import type { BaseMessage } from "@langchain/core/messages";
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
-import { agentTools } from "./agent-tools";
+import { agentTools } from "./agent-tools.js";
+import { ENV } from "./_core/env.js";
 
 interface TaskStep {
   id: string;
@@ -147,15 +148,15 @@ let llm: ChatOpenAI | null = null;
 function initializeLLM(): ChatOpenAI {
   if (llm) return llm;
 
-  const useDeepSeek = process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_URL;
+  const useDeepSeek = ENV.deepseekApiKey && ENV.deepseekApiUrl;
 
   if (useDeepSeek) {
     llm = new ChatOpenAI({
       model: "deepseek-chat",
       temperature: 0.3,
-      apiKey: process.env.DEEPSEEK_API_KEY || "",
+      apiKey: ENV.deepseekApiKey,
       configuration: {
-        baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com",
+        baseURL: ENV.deepseekApiUrl,
       },
     });
     console.log("[AutonomousAgent] Using DeepSeek API");
@@ -163,9 +164,9 @@ function initializeLLM(): ChatOpenAI {
     llm = new ChatOpenAI({
       model: "qwen-plus",
       temperature: 0.3,
-      apiKey: process.env.BUILT_IN_FORGE_API_KEY || "",
+      apiKey: ENV.forgeApiKey,
       configuration: {
-        baseURL: process.env.BUILT_IN_FORGE_API_URL || "",
+        baseURL: ENV.forgeApiUrl,
       },
     });
     console.log("[AutonomousAgent] Using Qwen API");

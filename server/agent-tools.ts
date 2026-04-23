@@ -5,6 +5,7 @@
 
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
+import { ENV } from "./_core/env.js";
 
 const CITY_CODES: Record<string, string> = {
   "北京": "110000",
@@ -317,6 +318,62 @@ function getCityCode(cityName: string): string | null {
 /**
  * Calculator Tool: Performs mathematical calculations
  */
+function safeEvaluate(expr: string): number | null {
+  const tokens = expr.match(/(\d+\.?\d*|[+\-*/()])/g);
+  if (!tokens) return null;
+  
+  for (const token of tokens) {
+    if (!/^[\d.+\-*/()]+$/.test(token)) {
+      return null;
+    }
+  }
+  
+  try {
+    const rpn: string[] = [];
+    const ops: string[] = [];
+    const precedence: Record<string, number> = { '+': 1, '-': 1, '*': 2, '/': 2 };
+    
+    for (const token of tokens) {
+      if (/^\d+\.?\d*$/.test(token)) {
+        rpn.push(token);
+      } else if (token === '(') {
+        ops.push(token);
+      } else if (token === ')') {
+        while (ops.length && ops[ops.length - 1] !== '(') {
+          rpn.push(ops.pop()!);
+        }
+        ops.pop();
+      } else {
+        while (ops.length && ops[ops.length - 1] !== '(' && 
+               (precedence[ops[ops.length - 1]] || 0) >= (precedence[token] || 0)) {
+          rpn.push(ops.pop()!);
+        }
+        ops.push(token);
+      }
+    }
+    while (ops.length) rpn.push(ops.pop()!);
+    
+    const stack: number[] = [];
+    for (const token of rpn) {
+      if (/^\d+\.?\d*$/.test(token)) {
+        stack.push(parseFloat(token));
+      } else {
+        const b = stack.pop()!;
+        const a = stack.pop()!;
+        switch (token) {
+          case '+': stack.push(a + b); break;
+          case '-': stack.push(a - b); break;
+          case '*': stack.push(a * b); break;
+          case '/': stack.push(a / b); break;
+        }
+      }
+    }
+    return stack[0];
+  } catch {
+    return null;
+  }
+}
+
 export const calculatorTool = tool(
   async ({ expression }: { expression: string }) => {
     try {
@@ -329,12 +386,28 @@ export const calculatorTool = tool(
       
       processed = processed.replace(/\^/g, '**');
       
-      console.log(`[Calculator] Original: ${expression}, Processed: ${processed}`);
+      let result: number | null = null;
       
-      // eslint-disable-next-line no-new-func
-      const result = new Function(`"use strict"; return (${processed})`)();
+      if (processed.includes('**0.5')) {
+        const parts = processed.split('**0.5');
+        if (parts.length === 2) {
+          const base = safeEvaluate(parts[0].replace(/[()]/g, ''));
+          if (base !== null) {
+            result = Math.sqrt(base);
+          }
+        }
+      } else if (processed.includes('**')) {
+        const match = processed.match(/([\d.]+)\s*\*\*\s*([\d.]+)/);
+        if (match) {
+          const base = parseFloat(match[1]);
+          const exp = parseFloat(match[2]);
+          result = Math.pow(base, exp);
+        }
+      } else {
+        result = safeEvaluate(processed);
+      }
       
-      if (typeof result !== "number" || isNaN(result)) {
+      if (result === null || isNaN(result)) {
         return "错误: 计算结果无效";
       }
       
@@ -503,7 +576,7 @@ export const currentTimeTool = tool(
  */
 export const weatherTool = tool(
   async ({ city, dateType }: { city: string; dateType?: string }) => {
-    const apiKey = process.env.AMAP_API_KEY;
+    const apiKey = ENV.amapApiKey;
     
     if (!apiKey) {
       return "天气查询功能暂未配置，请联系管理员设置高德地图 API Key。";

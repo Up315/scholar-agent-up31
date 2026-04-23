@@ -37,7 +37,7 @@ export type TrpcContext = {
 export async function createContext(opts?: { req?: Request | any; res?: any }): Promise<TrpcContext> {
   let user: User | null = null;
 
-  if (!ENV.isProduction && !ENV.oAuthServerUrl) {
+  if (!ENV.oAuthServerUrl) {
     user = await getOrCreateDevUser();
   } else {
     try {
