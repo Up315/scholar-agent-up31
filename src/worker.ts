@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { trpcServer } from '@hono/trpc-server';
-import { serveStatic } from 'hono/cloudflare-workers';
+import { handle } from 'hono/cloudflare-pages';
 import { appRouter } from '../server/routers.js';
 import { createContext } from '../server/_core/context.js';
 import { COOKIE_NAME, ONE_YEAR_MS } from '../shared/const.js';
@@ -22,7 +22,6 @@ type Bindings = {
   OWNER_OPEN_ID: string;
   BUILT_IN_FORGE_API_URL: string;
   BUILT_IN_FORGE_API_KEY: string;
-  ASSETS: Fetcher;
   RATE_LIMIT_MAX?: string;
 };
 
@@ -63,7 +62,7 @@ function checkRateLimit(c: any, maxRequests: number): { allowed: boolean; remain
 }
 
 const ALLOWED_ORIGINS = [
-  'https://scholar-agent.3300709163.workers.dev',
+  'https://scholar-agent.pages.dev',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
@@ -73,7 +72,7 @@ const ALLOWED_ORIGINS = [
 function isAllowedOrigin(origin: string | undefined): boolean {
   if (!origin) return true;
   if (ALLOWED_ORIGINS.includes(origin)) return true;
-  if (origin.endsWith('.workers.dev')) return true;
+  if (origin.endsWith('.pages.dev')) return true;
   if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return true;
   return false;
 }
@@ -109,10 +108,6 @@ app.use('*', async (c, next) => {
   });
   await next();
 });
-
-app.use('/assets/*', serveStatic({ root: './' }));
-app.use('/__manus__/*', serveStatic({ root: './' }));
-app.use('/index.html', serveStatic({ root: './' }));
 
 const api = app.basePath('/api');
 
@@ -330,8 +325,5 @@ api.get('/health', (c) => {
   });
 });
 
-app.get('*', async (c) => {
-  return await c.env.ASSETS.fetch(c.req.raw);
-});
-
 export default app;
+export const onRequest = handle(app);

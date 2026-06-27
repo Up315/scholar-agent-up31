@@ -12,8 +12,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   root: path.resolve(__dirname, 'client'),
   build: {
-    outDir: path.resolve(__dirname, 'dist/public'),
-    emptyOutDir: true,
+    outDir: path.resolve(__dirname, 'dist'),
+    emptyOutDir: false,
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
