@@ -1,4 +1,4 @@
-﻿# Scholar Agent - AI 智能生活助理
+# Scholar Agent - AI 智能生活助理
 
 基于 LangChain ReAct Agent 的智能对话平台，集成天气查询、数学计算、备忘录、提醒事项等多种工具调用能力，支持自主任务规划与多步骤执行。
 
@@ -37,7 +37,7 @@
 
 ## 安装
 
-``bash
+```bash
 # 克隆项目
 git clone https://github.com/Up315/scholar-agent-up31.git
 cd scholar-agent-up31
@@ -48,7 +48,7 @@ npm install
 # 配置环境变量
 cp .env.example .env
 # 编辑 .env 文件，填入必要的 API Key
-``
+```
 
 ## 环境变量
 
@@ -65,32 +65,32 @@ cp .env.example .env
 
 ## 本地开发
 
-``bash
+```bash
 # 启动开发服务器
 npm run dev
 
 # 访问 http://localhost:5173
-``
+```
 
 ## 部署到 Cloudflare Pages
 
 ### 一键部署
 
-``bash
+```bash
 npm run deploy:pages
-``
+```
 
 该命令会依次执行：清理 `dist` → Vite 构建前端 → esbuild 打包 Functions → Wrangler 部署。
 
 ### 手动步骤
 
-``bash
+```bash
 # 1. 构建前端 + Functions
 npm run build:cf
 
 # 2. 部署到 Cloudflare Pages
 npx wrangler pages deploy dist --project-name scholar-agent
-``
+```
 
 ### 配置环境变量
 
@@ -104,7 +104,7 @@ npx wrangler pages deploy dist --project-name scholar-agent
 
 ## 项目结构
 
-``text
+```text
 scholar-agent/
 ├── client/                     # 前端代码
 │   ├── src/
@@ -136,7 +136,7 @@ scholar-agent/
 ├── wrangler.toml               # Cloudflare 配置
 ├── vite.config.ts              # Vite 构建配置
 └── drizzle.config.ts           # 数据库 ORM 配置
-``
+```
 
 ## AI Agent 架构
 
