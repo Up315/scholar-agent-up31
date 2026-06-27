@@ -1,8 +1,8 @@
-# Scholar Agent - AI 学术科研助手
+﻿# Scholar Agent - AI 学术科研助手
 
 一个基于 LangChain ReAct Agent 的智能对话平台，支持天气查询、数学计算、备忘录等多种工具调用。
 
-## 🌟 功能特性
+## 功能特性
 
 - **智能对话**：基于 DeepSeek API 的 AI 对话能力
 - **工具调用**：支持天气查询、数学计算、时间查询、备忘录、提醒事项
@@ -11,7 +11,7 @@
 - **响应式设计**：支持桌面和移动端
 - **暗色模式**：支持亮色/暗色主题切换
 
-## 🛠️ 技术栈
+## 技术栈
 
 ### 前端
 - **React 19** - UI 框架
@@ -27,14 +27,13 @@
 - **tRPC** - 类型安全 API
 
 ### 部署
-- **Cloudflare Workers** - 边缘计算平台
-- **Cloudflare Pages** - 静态资源托管
+- **Cloudflare Pages** - 静态资源托管与边缘计算
 
-## 📦 安装
+## 安装
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/scholar-agent.git
+git clone https://github.com/Up315/scholar-agent-up31.git
 cd scholar-agent
 
 # 安装依赖
@@ -45,15 +44,15 @@ cp .env.example .env
 # 编辑 .env 文件，填入你的 API Key
 ```
 
-## ⚙️ 环境变量
+## 环境变量
 
 | 变量名 | 说明 | 必填 |
 |--------|------|------|
-| `DEEPSEEK_API_KEY` | DeepSeek API 密钥 | ✅ |
-| `AMAP_API_KEY` | 高德地图 API 密钥（天气查询） | ❌ |
-| `JWT_SECRET` | JWT 签名密钥 | ✅ |
+| `DEEPSEEK_API_KEY` | DeepSeek API 密钥 | 是 |
+| `AMAP_API_KEY` | 高德地图 API 密钥（天气查询） | 否 |
+| `JWT_SECRET` | JWT 签名密钥 | 是 |
 
-## 🚀 本地开发
+## 本地开发
 
 ```bash
 # 启动开发服务器
@@ -62,35 +61,31 @@ npm run dev
 # 访问 http://localhost:5173
 ```
 
-## 🌐 部署到 Cloudflare
+## 部署到 Cloudflare Pages
 
 ### 1. 构建项目
 
 ```bash
-npm run build
+npm run build:cf
 ```
 
 ### 2. 部署
 
 ```bash
-# 登录 Cloudflare
-npx wrangler login
-
-# 部署
-npx wrangler deploy
+npm run deploy:pages
 ```
 
 ### 3. 配置环境变量
 
 在 Cloudflare Dashboard 中配置：
-- Workers → scholar-agent → Settings → Variables
+- Pages -> scholar-agent -> Settings -> Environment variables
 
 添加以下变量：
 - `DEEPSEEK_API_KEY`
 - `AMAP_API_KEY`
 - `JWT_SECRET`
 
-## 📁 项目结构
+## 项目结构
 
 ```
 scholar-agent/
@@ -107,13 +102,13 @@ scholar-agent/
 │   ├── agent.ts            # AI Agent 实现
 │   └── agent-tools.ts      # Agent 工具定义
 ├── src/
-│   └── worker.ts           # Cloudflare Workers 入口
+│   └── worker.ts           # Cloudflare Pages Functions 入口
 ├── shared/                 # 共享代码
 ├── wrangler.toml           # Cloudflare 配置
 └── vite.config.ts          # Vite 配置
 ```
 
-## 🤖 AI Agent 工具
+## AI Agent 工具
 
 | 工具 | 功能 |
 |------|------|
@@ -123,20 +118,22 @@ scholar-agent/
 | `create_memo` | 创建备忘录 |
 | `set_reminder` | 设置提醒 |
 
-## 🔒 安全特性
+## 安全特性
 
-- ✅ CORS 限制
-- ✅ API 速率限制（30次/分钟/IP）
-- ✅ 密码 SHA-256 加密存储
-- ✅ 登录失败锁定（5次失败锁定15分钟）
-- ✅ 安全 Headers（X-Frame-Options, XSS-Protection）
-- ✅ 错误信息脱敏
-- ✅ 输入验证
+- CORS 限制
+- API 速率限制（30次/分钟/IP）
+- 密码 SHA-256 加密存储
+- 登录失败锁定（5次失败锁定15分钟）
+- 安全 Headers（X-Frame-Options, XSS-Protection）
+- 错误信息脱敏
+- 输入验证
 
-## 📝 License
+## License
 
-MIT
+MIT License - 详见 [LICENSE](LICENSE) 文件
 
-## 👨‍💻 Author
+Copyright (c) 2026 王怡涵
 
-Your Name - [GitHub](https://github.com/your-username)
+## 作者
+
+**王怡涵** - [GitHub](https://github.com/Up315)
